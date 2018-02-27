@@ -36,8 +36,6 @@ func (i *schemas) Set(value string) error {
 }
 
 var schema schemas
-var output = flag.String("out", "", "Output file name.")
-var packageName = flag.String("package", "gzavro", "package name")
 
 func main() {
 	parseAndValidateArgs()
