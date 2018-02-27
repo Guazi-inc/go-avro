@@ -13,5 +13,3 @@ Code Generation Tool for Go-Avro
 
 `--out` - absolute or relative path to output file. All directories will be created if necessary. Existing file will be truncated.
 
-**Register schema**:
-set registry address to environment variable: SCHEMA_REGISTRY_ADDR 
