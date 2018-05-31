@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"github.com/getsentry/raven-go"
 )
 
 const (
@@ -73,6 +74,10 @@ const (
 	JSON                                  = "application/json"
 	JSON_WEIGHTED                         = "application/json qs=0.5"
 	GENERIC_REQUEST                       = "application/octet-stream"
+)
+
+const (
+	SCHEMA_NOT_FOUND int32 = 40403
 )
 
 var PREFERRED_RESPONSE_TYPES = []string{SCHEMA_REGISTRY_V1_JSON, SCHEMA_REGISTRY_DEFAULT_JSON, JSON}
@@ -320,7 +325,19 @@ func (this *CachedSchemaRegistryClient) checkIfRegistered(subject string, schema
 		}
 		return decodedResponse, nil
 	}
-	return nil, this.handleError(response)
+
+	handleErr:=this.handleError(response)
+
+	// schema not found 发sentry
+	raven.CapturePanic(func() {
+		if errMsg,ok:=handleErr.(*ErrorMessage);ok{
+			if errMsg.Error_code==SCHEMA_NOT_FOUND{
+				panic("Schema not found")
+			}
+		}
+	},map[string]string{"subject":subject})
+
+	return nil, handleErr
 }
 
 func (this *CachedSchemaRegistryClient) newDefaultRequest(method string, uri string, reader io.Reader) (*http.Request, error) {
@@ -356,10 +373,10 @@ func (this *CachedSchemaRegistryClient) handleError(response *http.Response) err
 	if err != nil {
 		return err
 	}
+
 	err = json.Unmarshal(responseBytes, registryError)
 	if err != nil {
 		return err
 	}
-
 	return registryError
 }
