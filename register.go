@@ -6,7 +6,6 @@ package avro
  */
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -150,21 +149,24 @@ func (this *CachedSchemaRegistryClient) IsReg() bool {
 }
 
 func (this *CachedSchemaRegistryClient) Register(subject string, schema Schema) (int32, error) {
-	var schemaIdMap map[Schema]int32
+	var schemaIdMap map[string]int32
 	var exists bool
 	var id int32
+	var ok bool
 
+	schemaStr:=schema.String()
 	tempSchemaIDMap, exists := this.schemaCache.Load(subject)
 	if exists {
-		if schemaIdMap, ok := tempSchemaIDMap.(map[Schema]int32); ok {
-			if id, exists = schemaIdMap[schema]; exists {
+		if schemaIdMap, ok = tempSchemaIDMap.(map[string]int32); ok {
+			if id, exists = schemaIdMap[schemaStr]; exists {
 				return id, nil
 			}
 		} else {
-			return 0, errors.New("schemaCache is not map[schema]int32")
+			this.schemaCache.Delete(subject)
+			schemaIdMap=make(map[string]int32)
 		}
 	} else {
-		schemaIdMap = make(map[Schema]int32)
+		schemaIdMap = make(map[string]int32)
 	}
 
 	request, err := this.newDefaultRequest("POST",
@@ -181,7 +183,7 @@ func (this *CachedSchemaRegistryClient) Register(subject string, schema Schema) 
 			return 0, err
 		}
 
-		schemaIdMap[schema] = decodedResponse.Id
+		schemaIdMap[schemaStr] = decodedResponse.Id
 		this.schemaCache.Store(subject, schemaIdMap)
 		this.idCache.Store(decodedResponse.Id, schema)
 
@@ -251,28 +253,31 @@ func (this *CachedSchemaRegistryClient) GetLatestSchemaMetadata(subject string) 
 }
 
 func (this *CachedSchemaRegistryClient) GetVersion(subject string, schema Schema) (int32, error) {
-	var schemaVersionMap map[Schema]int32
+	var schemaVersionMap map[string]int32
 	var exists bool
+	var ok bool
 
 	var version int32
+	schemaStr:=schema.String()
 	tempSchemaVMap, exists := this.versionCache.Load(subject)
 	if exists {
-		schemaVersionMap, ok := tempSchemaVMap.(map[Schema]int32)
+		schemaVersionMap, ok = tempSchemaVMap.(map[string]int32)
 		if ok {
-			if version, exists = schemaVersionMap[schema]; exists {
+			if version, exists = schemaVersionMap[schemaStr]; exists {
 				return version, nil
 			}
 		} else {
-			return 0, errors.New("versionCache is not map[schema]int32")
+			schemaVersionMap =make(map[string]int32)
+			this.versionCache.Delete(subject)
 		}
 	} else {
-		schemaVersionMap = make(map[Schema]int32)
+		schemaVersionMap = make(map[string]int32)
 	}
 	decodedResponse, err := this.checkIfRegistered(subject, schema)
 	if err != nil {
 		return 0, err
 	}
-	schemaVersionMap[schema] = decodedResponse.Version
+	schemaVersionMap[schemaStr] = decodedResponse.Version
 	this.versionCache.Store(subject, schemaVersionMap)
 	return decodedResponse.Version, nil
 
@@ -280,31 +285,33 @@ func (this *CachedSchemaRegistryClient) GetVersion(subject string, schema Schema
 
 // GetIDBySchema 通过subject，schema获取schemaID
 func (this *CachedSchemaRegistryClient) GetIDBySchema(subject string, schema Schema) (int32, error) {
-	var schemaIDMap map[Schema]int32
+	var schemaIDMap map[string]int32
 	var exists bool
 	var id int32
+	var ok bool
 
+	schemaStr:=schema.String()
 	// 在缓存中查找
 	tempSchemaIDMap, exists := this.schemaCache.Load(subject)
 	if exists {
-		schemaIDMap, ok := tempSchemaIDMap.(map[Schema]int32)
+		schemaIDMap, ok = tempSchemaIDMap.(map[string]int32)
 		if ok {
-			if id, exists = schemaIDMap[schema]; exists {
+			if id, exists = schemaIDMap[schemaStr]; exists {
 				return id, nil
 			}
 		} else {
-			return 0, errors.New("schemaCache is not map[schema]int32")
+			schemaIDMap = make(map[string]int32)
+			this.schemaCache.Delete(subject)
 		}
 	} else {
-		schemaIDMap = make(map[Schema]int32)
+		schemaIDMap = make(map[string]int32)
 	}
-
 	// 向注册中心请求
 	decodedResponse, err := this.checkIfRegistered(subject, schema)
 	if err != nil {
 		return 0, err
 	}
-	schemaIDMap[schema] = decodedResponse.Id
+	schemaIDMap[schemaStr] = decodedResponse.Id
 	this.schemaCache.Store(subject, schemaIDMap)
 	return decodedResponse.Id, nil
 }
