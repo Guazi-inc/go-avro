@@ -99,6 +99,7 @@ func (codegen *CodeGenerator) Generate() (string, error) {
 
 		schema, ok := parsedSchema.(*RecordSchema)
 		if !ok {
+			fmt.Printf("Skip schema:%s",parsedSchema.GetName())
 			continue
 			//return "", errors.New("Not a Record schema.")
 		}
