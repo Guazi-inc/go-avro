@@ -90,7 +90,8 @@ func newEnumSchemaInfo(schema *EnumSchema) (*enumSchemaInfo, error) {
 // The ouput is Go formatted source code that contains struct definitions for all given schemas.
 // May return an error if code generation fails, e.g. due to unparsable schema.
 func (codegen *CodeGenerator) Generate() (string, error) {
-	for index, rawSchema := range codegen.rawSchemas {
+	writerPackage:=false
+	for _, rawSchema := range codegen.rawSchemas {
 		parsedSchema, err := ParseSchema(rawSchema)
 		if err != nil {
 			return "", err
@@ -98,7 +99,9 @@ func (codegen *CodeGenerator) Generate() (string, error) {
 
 		schema, ok := parsedSchema.(*RecordSchema)
 		if !ok {
-			return "", errors.New("Not a Record schema.")
+			fmt.Printf("Skip schema:%s",parsedSchema.GetName())
+			continue
+			//return "", errors.New("Not a Record schema.")
 		}
 		schemaInfo, err := newRecordSchemaInfo(schema)
 		if err != nil {
@@ -109,7 +112,8 @@ func (codegen *CodeGenerator) Generate() (string, error) {
 		codegen.codeSnippets = append(codegen.codeSnippets, buffer)
 
 		// write package and import only once
-		if index == 0 {
+		if !writerPackage {
+			writerPackage = true
 			err = codegen.writePackageName(schemaInfo)
 			if err != nil {
 				return "", err
