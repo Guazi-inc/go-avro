@@ -119,7 +119,7 @@ func TestGetLatestSchemaMetadata(t *testing.T) {
 func BenchmarkRegister(b *testing.B) {
 
 	var wg sync.WaitGroup
-	regClient := NewCachedSchemaRegistryClient("http://g1-bdp-hdp-19.dns.guazi.com:8081")
+	regClient := NewCachedSchemaRegistryClient("")
 	id := int32(735)
 	schema, err := regClient.GetByID(id)
 	if err != nil {
