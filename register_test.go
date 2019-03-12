@@ -38,7 +38,7 @@ var rawList = []string{rawSchema, rawSchema1, rawSchema2, rawSchema3, rawSchema4
 var schemaList []Schema
 
 func init() {
-	regClient = NewCachedSchemaRegistryClient("http://g1-bdp-hdp-19.dns.guazi.com:8081")
+	regClient = NewCachedSchemaRegistryClient("")
 	_ = regClient
 	for i := range rawList {
 		sch, err := ParseSchema(rawList[i])
